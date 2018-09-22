@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+service BookStore {
+    // (Method definitions not shown)
+
+    rpc GetBook(BookReference) returns (Book) {}
+
+}
+
+message Book {
+    // Each field in the message definition has a:
+    // 1) type
+    // 2) name
+    // 3) unique number: this is used during encoding, which allows for very efficient referencing to the fields
+    string title = 1;
+    string author = 2;
+    int32 year = 3; // def
+}
+
+
+message BookReference {
+    string title = 1;
+}
+
+// NOTE: You can also build more complex messages with enums and embedded messages, like so:
+
+// message SearchResponse {
+//    message Result {
+//       string url = 1;
+//       string title = 2;
+//   }
+//   enum Corpus {
+//     NEWS = 1;
+//     PRODUCTS = 2;
+//     VIDEO = 3;
+//   }
+//   Corpus corpus = 1;
+//   Result results = 2;
+// }

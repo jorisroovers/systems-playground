@@ -47,7 +47,7 @@ query MyCustomName{
 # Note that all of this can also be done from the command-line:
 # curl -s -H "content-type: application/graphql" -d "{allUsers {id}}" https://fakerql.com/graphql | jq .
 # Same query but using json body
-curl -s -H "content-type: application/json" -d '{"query": " { allUsers {id}}"}' https://fakerql.com/graphql | jq .
+# curl -s -H "content-type: application/json" -d '{"query": " { allUsers {id}}"}' https://fakerql.com/graphql | jq .
 
 # Get Todos:
 query AllTodos {
@@ -88,61 +88,6 @@ mutation AddTodo {
 }
 ```
 
-A more complex example:
-```graphql
-{
-  hero {
-    name
-    # Queries can have comments!
-    friends {
-      name
-    }
-  }
-}
-```
-Which might result in:
-```graphql
-{
-  "data": {
-    "hero": {
-      "name": "R2-D2",
-      "friends": [
-        {
-          "name": "Luke Skywalker"
-        },
-        {
-          "name": "Han Solo"
-        },
-        {
-          "name": "Leia Organa"
-        }
-      ]
-    }
-  }
-}
-```
-
-Or get a specific human, like so:
-```graphql
-{
-  human(id: "1000") {
-    name
-    height
-  }
-}
-```
-Result:
-```graphql
-{
-  "data": {
-    "human": {
-      "name": "Luke Skywalker",
-      "height": 1.72
-    }
-  }
-}
-```
-
 GraphQL is a lot more powerful than these simple examples, for more detail, refer to the [GraphQL website](http://graphql.github.io/learn/).
 
 ### GraphQL over JSON
@@ -164,6 +109,10 @@ Responses have a "data" key:
 ## Programs
 
 There's multiple programs in this directory, listed here in order of increasing complexity.
+
+```bash
+go get
+```
 
 ### graphql-simple.go
 

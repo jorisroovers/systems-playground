@@ -262,8 +262,8 @@ func main() {
 	}
 
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{Name: "RootQuery", Fields: rootFields})
-	// Setup schema for use, note that how we specify Query here. We could also specify Mutation here if we wanted to
-	// support that
+	// Setup schema for use, note that how we specify 'Query' here. We could also specify 'Mutation' here if we wanted to
+	// support that. Implementing mutations is very similar to Queries.
 	schemaConfig := graphql.SchemaConfig{Query: rootQuery}
 	schema, err := graphql.NewSchema(schemaConfig)
 	if err != nil {
