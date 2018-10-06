@@ -36,7 +36,7 @@ def serve():
     book_store_pb2_grpc.add_BookStoreServicer_to_server(BookStore(backend_name), server)
     server.add_insecure_port('[::]:50051')
     server.start()
-    print("Starting server....")
+    print("Starting server (on port 50051)...")
     try:
         while True:
             time.sleep(_ONE_DAY_IN_SECONDS)
