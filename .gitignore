@@ -1,3 +1,6 @@
 # empty for now :-)
 .venv
 *.pyc
+.terraform
+.tfstate
+.tfstate*

@@ -10,22 +10,32 @@ curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minik
 
 # Starting minikube
 minikube start
-# Ensure 'docker' env variables (e.g. DOCKER_HOST) point to minikube's Docker. 
+# Ensure 'docker' env variables (e.g. DOCKER_HOST) point to minikube's Docker.
 # Make sure to execute this command in every terminal that is being used
 eval $(minikube docker-env)
 
-# Enable kubectl autocompletion
+# Enable kubectl autocompletion (not sure if working on mac...)
 source <(kubectl completion bash)
 
 # Other commands:
 minikube status
 minikube stop
+# Starting with a clean kubernetes cluster (takes a while):
+minikube delete
+rm -rf ~/.minikube
+eval $(minikube docker-env)
 ```
 
 # Docker image building
 
 These are instructions to build the docker images of the gRPC app. Make sure to run ```eval $(minikube docker-env)```
 first if you want to do this with Kubernetes.
+
+What's happening here, is that minikube is running a docker instance in a VM. By running ```eval $(minikube docker-env)```,
+we're pointing our docker command to the docker instance in the VM.
+
+When we now build docker images, we will be doing so within the minikub environment, and kubernetes will be able to find
+them under the name we give to the images.
 
 Note: Dockerfiles cannot add files using ADD or COPY from files outside of the directory the Dockerfile sits in.
 That's why the Dockerfiles we will use for this will be sitting together with the source-code of the gRPC samples.
@@ -61,31 +71,79 @@ docker run -ti -p 1234:1234 web
 curl localhost:1234
 ```
 
-## Fun with Kubernetes
+# Fun with Kubernetes
 
-### Single container deployments
+Make sure to build the images with docker (pointing to the minikube docker instace) as described in the previous section.
+
+## Intro to k8s
+
+K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, all can
+be manipulated using the same set of commands. List all resource types with ```kubectl get --help```.
+
+Basic resources:
+- Pods: scalable containers
+- Deployments: group of pods and their interconnectivity
+- Services: Way to expose containers to the outside world
+- Nodes: Infrastructure where k8s is hosting your containers on
+
+Great for hands-on examples: http://kubernetesbyexample.com
+
+## Single container deployments
+
+
 ```sh
 # We need to set --image-pull-policy=Never to ensure that k8s will search our local images.
 # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
 # Format
 # kubectl run <deployment-name> --image=<image> ...
 kubectl run hello-web --image=web --port=1234 --image-pull-policy=Never
-# Expose deployment
-kubectl expose deployment hello-web --type=NodePort
+# Same, but using a file definition (only creates a pod, not a deployment):
+kubectl create -f simple-pod.yaml
 
 # List info
 kubectl get deployments
 kubectl get pods # a deployment can contain multiple pods
+kubectl get services  # services expose ports from deployments/pods for external use
+
+# Resource specific details
+kubectl describe pod hello-web
+kubectl describe pod web-from-file
+kubectl describe deployment hello-web # only exists for hello-web, not for web-from-file
+
+# Expose deployment, this will create a 'hello-web' k8s service.
+kubectl expose deployment hello-web --type=NodePort
+kubectl expose pod web-from-file --type=NodePort # expose a pod
+
+# Details on created service
+kubectl describe service hello-web
+kubectl describe service web-from-file
+
+# Since this is running locally, minikube needs to do some vodoo with networking. To actually query the URL, do this:
+curl $(minikube service hello-web --url)
+curl $(minikube service web-from-file --url)
+# Should return: "This is the index page!"
 
 # To delete (pods will get deleted automatically)
 kubectl delete deployment hello-web
 # Note that if you just delete a single pod, it will get recreated (that's a k8s feature!), you need to delete the deployment
-
-# Since this is running locally, minikube needs to do some vodoo with networking. To actually query the URL, do this:
-curl $(minikube service hello-web --url)
-# Should return: "This is the index page!"
+kubectl delete pod web-from-file
+# services need to be deleted separately!
+kubectl delete service hello-web
+kubectl delete service web-from-file
 ```
 
-# Multi-container deployments
+## Multi-container deployments
 
-TODO
+JR: Continue here :-) multi-pod-deployment.yaml doesn't work yet.
+
+```shell
+kubectl create -f multi-pod-deployment.yaml
+```
+
+## Misc Notes
+
+```shell
+# K8s config
+kubectl config view
+
+```
