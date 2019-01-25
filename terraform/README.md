@@ -2,7 +2,16 @@
 Simple experiments with Terraform using AWS and GCP.
 
 ## Pre-requisities
+### AWS
+AWS setup is pretty straightforward, just generate an ACCESS_KEY/SECRET_KEY combination, and you're good to go.
 
+### GCP
+GCP setup is a bit more complicated.
+
+1. Create a service account for Compute Engine at this URL: https://console.cloud.google.com/apis/credentials/serviceaccountkey
+2. Download the secret file and move it to /tmp/gcp-account.json
+3. Assign 'Compute Admin' role to the newly created Service account: https://console.cloud.google.com/iam-admin/
+4. Make sure that the GCP_PROJECT env variable below to match the project name in the secret file.
 
 ##  Using Terraform
 
@@ -36,14 +45,3 @@ terraform output instance-ip # Specific output
 # Cleanup
 terraform destroy
 ```
-
-/tmp/gcp-account.json
-
-Creating service account:
-https://console.cloud.google.com/apis/credentials/serviceaccountkey
-
-Assign roles:
-https://console.cloud.google.com/iam-admin/
-
-
-'Compute Admin' Role

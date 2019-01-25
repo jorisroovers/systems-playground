@@ -82,7 +82,7 @@ be manipulated using the same set of commands. List all resource types with ```k
 
 Basic resources:
 - Pods: scalable containers
-- Deployments: group of pods and their interconnectivity
+- Deployments: group of pods and their inter-connectivity
 - Services: Way to expose containers to the outside world
 - Nodes: Infrastructure where k8s is hosting your containers on
 
@@ -126,6 +126,7 @@ curl $(minikube service web-from-file --url)
 # To delete (pods will get deleted automatically)
 kubectl delete deployment hello-web
 # Note that if you just delete a single pod, it will get recreated (that's a k8s feature!), you need to delete the deployment
+# For the web-from-file deployment, we didn't create a deployment, so we can just remove the pod
 kubectl delete pod web-from-file
 # services need to be deleted separately!
 kubectl delete service hello-web

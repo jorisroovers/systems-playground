@@ -1,18 +1,30 @@
-apiVersion: v2
+# Different resources (e.g. pod, deployment, etc) use different apiVersions
+# By default, k8s comes with some apiVersions installed, but you can also
+# install your own to teach k8s about new resource types.
+# Listing currently installed apiVersions: kubectl api-versions
+# The 'Deployment' resource type is part of the extensions/v1beta1 API.
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: multi-pod-deployment
+# The spec part of the Deployment resource is defined here:
+# https://kubernetes.io/docs/reference/federation/extensions/v1beta1/definitions/#_v1beta1_deploymentspec
 spec:
-  containers:
-  - name: web
-    image: web
-    # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
-    # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
-    imagePullPolicy: Never
-    ports:
-    - containerPort: 1234
-  - name: backend
-    image: backend
-    imagePullPolicy: Never
-    ports:
-    - containerPort: 50051
+  template:
+    metadata:
+      labels:
+        label: grpc-app
+    spec:
+      containers:
+      - name: web
+        image: web
+        # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+        # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 1234
+      - name: backend
+        image: backend
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 50051
