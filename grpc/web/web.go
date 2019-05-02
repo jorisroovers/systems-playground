@@ -43,10 +43,12 @@ func getBookFromBackend() *book_store.Book {
 func main() {
 	log.Println("Hello!")
 	http.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
+		log.Println("[GET] /hello")
 		book := getBookFromBackend()
 		fmt.Fprintf(w, "Book: %s\n", book.Title)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		log.Println("[GET] /")
 		fmt.Fprintf(w, "This is the index page!\n")
 	})
 	http.ListenAndServe(":1234", nil)

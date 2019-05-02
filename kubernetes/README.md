@@ -67,13 +67,13 @@ docker build -t web .
 # Running web image with docker directly
 docker run -ti -p 1234:1234 web
 
-# Note that if you're running using regular docker (non-minikube), you cna just use curl at this point
+# Note that if you're running using regular docker (non-minikube), you can just use curl at this point
 curl localhost:1234
 ```
 
 # Fun with Kubernetes
 
-Make sure to build the images with docker (pointing to the minikube docker instace) as described in the previous section.
+Make sure to build the images with docker (pointing to the minikube docker instance) as described in the previous section.
 
 ## Intro to k8s
 
@@ -81,8 +81,8 @@ K8s has many different types of resources (service, deployment, pod, nodes). All
 be manipulated using the same set of commands. List all resource types with ```kubectl get --help```.
 
 Basic resources:
-- Pods: scalable containers
-- Deployments: group of pods and their inter-connectivity
+- Pods: collection of scalable containers
+- Deployments: supervisor for pods with fine-grained control over how and when a new pod version is rolled out as well as rolled back to a previous state.
 - Services: Way to expose containers to the outside world
 - Nodes: Infrastructure where k8s is hosting your containers on
 
@@ -90,26 +90,47 @@ Great for hands-on examples: http://kubernetesbyexample.com
 
 ## Single container deployments
 
-
+### Creation
 ```sh
 # We need to set --image-pull-policy=Never to ensure that k8s will search our local images.
 # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
 # Format
 # kubectl run <deployment-name> --image=<image> ...
 kubectl run hello-web --image=web --port=1234 --image-pull-policy=Never
+# Same, but also add labels. Labels make it easy to reference back to resources later on.
+kubectl run hello-web --image=web --port=1234 --image-pull-policy=Never --labels "foo=bar,hurr=durr"
 # Same, but using a file definition (only creates a pod, not a deployment):
 kubectl create -f simple-pod.yaml
 
-# List info
+# Same thing (apply allows you to apply file against existing resources as well):
+kubectl apply -f simple-pod.yaml
+
+# More complex example file
+kubectl apply -f complex-pod.yaml
+```
+
+### Inspection
+```bash
 kubectl get deployments
 kubectl get pods # a deployment can contain multiple pods
 kubectl get services  # services expose ports from deployments/pods for external use
+kubectl get pods -l foo=bar # only pods with label 'foo=bar'
+kubectl get pods -l 'foo in (bar, bazz)' # more complex selector
 
 # Resource specific details
 kubectl describe pod hello-web
 kubectl describe pod web-from-file
 kubectl describe deployment hello-web # only exists for hello-web, not for web-from-file
 
+# Execute a command - very similar to docker. This works only for pods.
+kubectl exec -it hello-web /bin/sh
+
+# Get logs for a pod - very similar to docker. This works only for pods.
+kubectl logs -f hello-web
+```
+
+### Services
+```bash
 # Expose deployment, this will create a 'hello-web' k8s service.
 kubectl expose deployment hello-web --type=NodePort
 kubectl expose pod web-from-file --type=NodePort # expose a pod
@@ -122,6 +143,10 @@ kubectl describe service web-from-file
 curl $(minikube service hello-web --url)
 curl $(minikube service web-from-file --url)
 # Should return: "This is the index page!"
+```
+
+### Removal
+```bash
 
 # To delete (pods will get deleted automatically)
 kubectl delete deployment hello-web
@@ -133,12 +158,22 @@ kubectl delete service hello-web
 kubectl delete service web-from-file
 ```
 
+### Replica sets
+TODO
+
 ## Multi-container deployments
 
 JR: Continue here :-) multi-pod-deployment.yaml doesn't work yet.
 
 ```shell
-kubectl create -f multi-pod-deployment.yaml
+# Create multi-container-pod
+kubectl create -f multi-container-pod.yaml
+
+# Get details on containers that are part of the pod
+kubectl describe deployment multi-container-pod
+
+# Show logs of the backend container in the pod for this deployment
+kubectl logs <pod-name> backend
 ```
 
 ## Misc Notes
@@ -146,5 +181,4 @@ kubectl create -f multi-pod-deployment.yaml
 ```shell
 # K8s config
 kubectl config view
-
 ```

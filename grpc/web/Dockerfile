@@ -13,7 +13,7 @@ ENV PATH /go/bin:$PATH
 WORKDIR /go/src/web
 COPY . /go/src/web
 
-# Install all depedencies (= all import statements, including "web/book_store")
+# Install all dependencies (= all import statements, including "web/book_store")
 # Run 'go get -v' for detailed output
 RUN go get
 

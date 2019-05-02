@@ -1,6 +1,6 @@
 
 # GRPC
-Back-end and Front-end are in different programming languages on purpose (Python and Go) to showcase that gRPC makes it easy to communicate between programs in different languages using protobuff (similar to how JSON, XML or Thrift do that).
+Back-end and Front-end are in different programming languages on purpose (Python and Go) to showcase that gRPC makes it easy to communicate between programs in different languages using protobuff (similar to how JSON, msgpack, XML or Thrift do that).
 
 Note that the ```Dockerfile```s present in the code are not used in this playground, but rather in that of kubernetes. The docker files need to be adjacent to the source-code, as Docker doesn't allow you to copy files into the docker images that are outside the current build context (also not by symlinking to them).
 

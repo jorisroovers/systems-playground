@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-from-file-complex
+  # labels are important in k8s. In this case, we need the label to be able to refer to this pod from the
+  # 'kubectl expose' command (see README.md). Without this label, that won't work.
+  # Bottom-line: always label your pods!
+  labels:
+    mylabel: web-from-file-complex
+spec:
+  containers:
+  - name: web-complex
+    image: web
+    # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+    # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+    imagePullPolicy: Never
+    ports:
+      - containerPort: 1234
+    env:
+      - name: DEMO_GREETING
+        value: "Hello from the environment"
+      - name: DEMO_FAREWELL
+        value: "Such a sweet sorrow"
+    resources:
+      limits:
+        memory: "64Mi"
+        cpu: "500m"

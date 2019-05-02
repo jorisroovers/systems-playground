@@ -6,7 +6,7 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: multi-pod-deployment
+  name: multi-container-pod
 # The spec part of the Deployment resource is defined here:
 # https://kubernetes.io/docs/reference/federation/extensions/v1beta1/definitions/#_v1beta1_deploymentspec
 spec:
