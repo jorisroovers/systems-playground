@@ -139,7 +139,7 @@ kubectl expose pod web-from-file --type=NodePort # expose a pod
 kubectl describe service hello-web
 kubectl describe service web-from-file
 
-# Since this is running locally, minikube needs to do some vodoo with networking. To actually query the URL, do this:
+# Since this is running locally, minikube needs to do some voodoo with networking. To actually query the URL, do this:
 curl $(minikube service hello-web --url)
 curl $(minikube service web-from-file --url)
 # Should return: "This is the index page!"
@@ -156,6 +156,14 @@ kubectl delete pod web-from-file
 # services need to be deleted separately!
 kubectl delete service hello-web
 kubectl delete service web-from-file
+
+# You can delete multiple resources of the same type at once by just listing them
+kubectl delete pod web-from-file web-from-file-complex
+
+# Delete multiple resources of different types by specifying their resource type as well: 
+# kubectel delete <resource-type>/<resource-name>
+kubectl delete pod/web-from-file secret/apikey
+
 ```
 
 ### Replica sets
@@ -163,7 +171,7 @@ TODO
 
 ## Multi-container deployments
 
-JR: Continue here :-) multi-pod-deployment.yaml doesn't work yet.
+JR: Continue here :-) multi-container-pod.yaml doesn't work yet.
 
 ```shell
 # Create multi-container-pod
@@ -174,6 +182,63 @@ kubectl describe deployment multi-container-pod
 
 # Show logs of the backend container in the pod for this deployment
 kubectl logs <pod-name> backend
+
+
+
+```
+
+## Secrets
+
+### Creation
+```bash
+# From CLI:
+kubectl create secret generic mysecret --from-literal=key1=supersecret
+
+# Note that secrets are key-value pairs, so you can specify multiple key-value pairs:
+kubectl create secret generic mysecret2 --from-literal=key2=supersecret2 --from-literal=key2=supersecret2
+
+
+# From File
+echo -n "foobar" > /tmp/mysecret.txt
+kubectl create secret generic mysecret-fromfile --from-file=key1=/tmp/mysecret.txt
+
+```
+
+### Inspection
+```bash
+# Basic info on secret (won't show the actual value)
+kubectl get secret mysecret
+kubectl get secret mysecret2
+kubecetl describe mysecret
+
+# To get value, output as yaml. Note that secret is still base64 encoded
+kubectl get secret mysecret2 -o yaml
+# Extract secret using awk + base64 --decode
+kubectl get secret mysecret2 -o yaml | awk -F ":" '/key1/{print $2}' | base64 --decode
+```
+
+### Consuming in pod
+```bash
+# Create secret, start pod
+kubectl create secret generic mysecret --from-literal=username=mysecretusername --from-literal=mysecret=foobar
+kubectl apply -f pod-with-secret.yaml
+
+# Show env variable, containing SECRET_USERNAME
+kubectl exec pod-with-secret env
+# Show volume mount containing secret
+kubectl exec pod-with-secret cat /tmp/mysecrets/mysecret
+
+# Update a previously set secret
+# Bit of a hack to update resources: https://stackoverflow.com/questions/45879498/how-can-i-update-a-secret-on-kubernetes-when-it-is-generated-from-a-file
+kubectl create secret generic mysecret --from-literal=username=joris --from-literal=mysecret=hurdur --dry-run -o yaml | kubectl apply -f -
+
+# NOTE: See how the secret on the mounted volume is updated while the env var is not.
+```
+
+
+### Removal
+```
+kubectl delete secret apikey
 ```
 
 ## Misc Notes
@@ -182,3 +247,4 @@ kubectl logs <pod-name> backend
 # K8s config
 kubectl config view
 ```
+
