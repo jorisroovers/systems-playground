@@ -7,9 +7,13 @@
 # Installation instructions at https://github.com/kubernetes/minikube/releases:
 # At the time of writing
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-darwin-amd64 && chmod +x minikube && sudo cp minikube /usr/local/bin/ && rm minikube
+brew install kubernetes-cli
 
 # Starting minikube
 minikube start
+# Alternatively, enable swagger UI support for API browsing:
+minikube start --extra-config=apiserver.enable-swagger-ui=true
+
 # Ensure 'docker' env variables (e.g. DOCKER_HOST) point to minikube's Docker.
 # Make sure to execute this command in every terminal that is being used
 eval $(minikube docker-env)
@@ -20,6 +24,8 @@ source <(kubectl completion bash)
 # Other commands:
 minikube status
 minikube stop
+minikube ssh  # SSH into the minkube VM
+
 # Starting with a clean kubernetes cluster (takes a while):
 minikube delete
 rm -rf ~/.minikube
@@ -77,16 +83,35 @@ Make sure to build the images with docker (pointing to the minikube docker insta
 
 ## Intro to k8s
 
-K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, all can
-be manipulated using the same set of commands. List all resource types with ```kubectl get --help```.
+K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, a bunch of them can also 
+be created/manipulated using CLI commands (but not all resource types - some require yaml files). 
+List all resource types with ```kubectl get --help```.
 
 Basic resources:
-- Pods: collection of scalable containers
+- Pods: collection of scalable containers. A pod typically maps onto a single micro-service (which might be comprised of multiple containers).
 - Deployments: supervisor for pods with fine-grained control over how and when a new pod version is rolled out as well as rolled back to a previous state.
 - Services: Way to expose containers to the outside world
 - Nodes: Infrastructure where k8s is hosting your containers on
+- Secrets: Secure storage for sensitive information for easy consumption in your k8s cluster
+- Volumes: shared storage
 
 Great for hands-on examples: http://kubernetesbyexample.com
+
+Under-the-hood processes:
+- kubectl: runs on every Node to provide computing
+- kube-proxy: runs on every Node to do mappings between VIPs and pods via iptables and IP namespaces.
+- kube-scheduler
+- kube-controller-manager
+- kube-dns
+- sidecar
+
+## Notes
+```sh
+# Show available nodes:
+kubectl get nodes
+kubectl describe nodes
+
+```
 
 ## Single container deployments
 
@@ -132,12 +157,15 @@ kubectl logs -f hello-web
 ### Services
 ```bash
 # Expose deployment, this will create a 'hello-web' k8s service.
+# --type=NodePort => expose deployment/deployment on its node (=host system)
 kubectl expose deployment hello-web --type=NodePort
 kubectl expose pod web-from-file --type=NodePort # expose a pod
 
 # Details on created service
 kubectl describe service hello-web
 kubectl describe service web-from-file
+# List services
+kubectl get services # shorthand=svc
 
 # Since this is running locally, minikube needs to do some voodoo with networking. To actually query the URL, do this:
 curl $(minikube service hello-web --url)
@@ -166,25 +194,147 @@ kubectl delete pod/web-from-file secret/apikey
 
 ```
 
-### Replica sets
-TODO
+## Deployments and rollouts
+Deployments and roll-outs make it easy to do upgrades of applications.
+
+```sh
+# Deploy version 1 of the web app (my-app), expose the port and get index page
+# Returned version is determined by the SERVICE_VERSION envar set in the yaml file.
+kubectl apply -f deployments/deployment-v1.yaml
+kubectl expose deployment my-app --type=NodePort
+curl $(minikube service my-app --url)
+
+# Roll out a newer version of the my-app
+kubectl apply -f deployments/deployment-v2.yaml
+curl $(minikube service my-app --url) # will show 'version 2'
+
+# Show all version of my-app
+kubectl rollout history deploy/my-app
+
+# Roll back to a previous version
+kubectl rollout undo deploy/my-app --to-revision=1
+curl $(minikube service my-app --url) # shows 'version 1' again
+
+# Roll out v3, which has 10 replicas configured. Use 'rollout status' to follow along.
+kubectl apply -f deployments/deployment-v3.yaml
+kubectl rollout status deploy/my-app
+kubectl get pods
+```
+
+## Scaling (replica sets)
+A k8s Deployment under-the-hood contains a Replicaset which is a wrapper around a Pod that allows it to horizontally scale the pod.
+While you can manually create the ReplicaSet resource type, there's usually no reason to do so directly.
+Instead, when you use a Deployment, k8s will automatically create the replicaset for you.
+
+```sh
+# Create deployment, show associated replicaset that k8s created
+kubectl apply -f deployments/deployment-v1.yaml
+kubectl get rs
+
+# Scale deployment up, to 3 pods
+kubectl scale --replicas 3 deploy/my-app
+kubectl scale --replicas 2 deploy/my-app # scale down
+
+
+```
+
+TODO: related to replica sets
+
+
 
 ## Multi-container deployments
 
 JR: Continue here :-) multi-container-pod.yaml doesn't work yet.
 
-```shell
-# Create multi-container-pod
-kubectl create -f multi-container-pod.yaml
+```bash
+# Create multi-container deployment
+kubectl create -f multi-container-deployment.yaml
 
 # Get details on containers that are part of the pod
-kubectl describe deployment multi-container-pod
+kubectl describe deployment multi-container-deployment
+
+#
+kubectl get replicaset
+kubectl get rs
+
+kubectl get pods
+
+# Run a command in a specific container using the -c flag
+kubectl exec <pod-name> -c backend ls
+kubectl exec <pod-name> -c web ls
+
 
 # Show logs of the backend container in the pod for this deployment
 kubectl logs <pod-name> backend
+```
 
 
+## Volumes
+Volumes can be shared across different containers.
+Multiple types of containers exist: emptyDir, hostpath, awsElasticBlockStore, cephfs, nfs, etc. There's a long list.
 
+```bash
+# 'hostPath' volume type = shared directory between pod and host system.
+# For the 'hostPath' volume type in pod-with-volumes.yaml, we need to make sure we have the directory created
+# on the host system.
+mkdir /tmp/k8s-shared
+# We also need to mount this directory in minikube, because the containers are really running inside the minikube VM
+# and not directly on our host machine.
+# This command needs to run in a seperate terminal and stay running.
+minikube mount /tmp/k8s-shared:/tmp/k8s-shared
+
+# Create sample pod
+kubectl create -f pod-with-volumes.yaml
+
+# List files in 'emptyDir' type volume on container
+kubectl exec pod-with-volumes -c container1 -- ls /tmp/foobar/
+kubectl exec pod-with-volumes -c container2 -- ls /tmp/hurdur
+
+# Write something to volume in first container
+kubectl exec -t pod-with-volumes -c container1  -- sh -c "echo pizza > /tmp/foobar/test"
+# Read it in the second container
+kubectl exec pod-with-volumes -c container2 -- cat /tmp/hurdur/test
+
+#  Create some test file in our host system
+echo "testfile" > /tmp/k8s-shared/hostpath-test
+# Read file on container
+kubectl exec pod-with-volumes -c container1 -- cat /tmp/shared1/hostpath-test
+```
+
+## Persistent volumes
+Shared across the cluster (=across nodes) and across node reboots. Like regular volumes, many types exist: nfs, GCEPersistentDisk, AWSElasticBlockStore, HostPath, CephFS, etc.
+
+TODO
+
+```bash
+
+kubectl create -f persistent-volumes/persistent-volume.yaml
+kubectl create -f persistent-volumes/persistent-volume-claim.yaml
+
+
+kubectl get persistentvolumes
+kubectl get pv
+
+kubectl get persistentvolumeclaims
+kubectl get pvc
+
+```
+
+## Namespaces
+Way to group k8s resources together. Like a tenant/project on other IaaS platforms.
+
+```bash
+# Create and list namespaces
+kubectl create namespace foobar
+kubectl get namespace
+
+# By default, kubectl commands run against the 'default' namespace, but you can always specify the namespace explicitly
+kubectl get pods --namespace foobar
+kubectl get pods -n foobar # shorthand
+
+# Resources can exist with the same name in different namespaces
+kubectl apply -f simple-pod.yaml # default namespace
+kubectl apply --namespace foobar -f simple-pod.yaml
 ```
 
 ## Secrets
@@ -196,7 +346,6 @@ kubectl create secret generic mysecret --from-literal=key1=supersecret
 
 # Note that secrets are key-value pairs, so you can specify multiple key-value pairs:
 kubectl create secret generic mysecret2 --from-literal=key2=supersecret2 --from-literal=key2=supersecret2
-
 
 # From File
 echo -n "foobar" > /tmp/mysecret.txt
@@ -237,9 +386,34 @@ kubectl create secret generic mysecret --from-literal=username=joris --from-lite
 
 
 ### Removal
-```
+```bash
 kubectl delete secret apikey
 ```
+
+## APIs
+While it's possible to access the k8s API directly, it's usually more easy to use ```kubectl proxy``` to take care of the certificates, authentication and selecting the right endpoint.
+
+Instructions on how to do it without ```kubectl proxy```: https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/#without-kubectl-proxy
+
+```bash
+# Easiest is to have kubectl proxy API requests
+kubectl proxy --port=8080 # Run this in separate terminal
+# Query API:
+curl http://localhost:8080/api/
+
+# Alternatively, get API server details:
+kubectl config view
+
+# Or, just use kubectl do to queries and get json
+kubectl get --raw=/api/v1
+kubectl get --raw=/api/v1/pods
+
+# Swagger UI (trailing slash matters!):
+# Doesn't seem to work well? UI is unresponsive
+http://localhost:8080/swagger-ui/
+
+```
+
 
 ## Misc Notes
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	// Import book_store generated code
@@ -20,9 +21,9 @@ const (
 	defaultName = "world"
 )
 
-func getBookFromBackend() *book_store.Book {
+func getBookFromBackend(backendEndAddress string) *book_store.Book {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(backendEndAddress, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -40,17 +41,33 @@ func getBookFromBackend() *book_store.Book {
 	return book
 }
 
+// https://stackoverflow.com/questions/40326540/how-to-assign-default-value-if-env-var-is-empty
+func getEnv(key, fallback string) string {
+    if value, ok := os.LookupEnv(key); ok {
+        return value
+    }
+    return fallback
+}
+
 func main() {
+	version := getEnv("SERVICE_VERSION", "1.0.0")
+	port := getEnv("SERVICE_PORT", "1234")
+	backendAddress := getEnv("SERVICE_BACKEND", "localhost:50051")
+
 	log.Println("Hello!")
+	log.Println("Version:", version)
+	log.Println("Listening port:", port)
+	log.Println("Backend:", backendAddress)
+
 	http.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
 		log.Println("[GET] /hello")
-		book := getBookFromBackend()
+		book := getBookFromBackend(backendAddress)
 		fmt.Fprintf(w, "Book: %s\n", book.Title)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		log.Println("[GET] /")
-		fmt.Fprintf(w, "This is the index page!\n")
+		fmt.Fprintf(w, "This is the index page! (Version: %s)\n", version)
 	})
-	http.ListenAndServe(":1234", nil)
+	http.ListenAndServe(":" + port, nil)
 
 }

@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-volumes
+spec:
+  containers:
+  - name: container1
+    image: web
+    # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+    # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+    imagePullPolicy: Never
+    ports:
+      - containerPort: 1234
+
+    volumeMounts:
+      - name: myvolume
+        mountPath: "/tmp/foobar"
+      - name: mysharedvolume
+        mountPath: "/tmp/shared1"
+
+  - name: container2
+    image: backend
+    imagePullPolicy: Never
+    ports:
+      - containerPort: 4567
+
+    volumeMounts:
+      - name: myvolume
+        mountPath: "/tmp/hurdur"
+      - name: mysharedvolume
+        mountPath: "/tmp/shared2"
+
+  volumes:
+  - name: myvolume
+    emptyDir: {}
+
+  # Volume shared between k8s node (=host) and containers
+  - name: mysharedvolume
+    hostPath:
+      # directory location on host
+      path: /tmp/k8s-shared
+      # this field is optional
+      type: Directory

@@ -1,0 +1,13 @@
+# For minikube, constraints apply:
+# https://github.com/kubernetes/minikube/blob/master/docs/persistent_volumes.md
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0001
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 5Gi
+  hostPath:
+    path: /data/pv0001/

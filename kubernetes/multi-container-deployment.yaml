@@ -6,24 +6,40 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: multi-container-pod
+  name: multi-container-deployment
 # The spec part of the Deployment resource is defined here:
 # https://kubernetes.io/docs/reference/federation/extensions/v1beta1/definitions/#_v1beta1_deploymentspec
 spec:
+  replicas: 2
   template:
     metadata:
       labels:
         label: grpc-app
     spec:
       containers:
-      - name: web
+      - name: web1
         image: web
         # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
         # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
         imagePullPolicy: Never
         ports:
         - containerPort: 1234
-      - name: backend
+
+      - name: web2
+        image: web
+        # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+        # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 1234
+
+      - name: backend1
+        image: backend
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 50051
+
+      - name: backend2
         image: backend
         imagePullPolicy: Never
         ports:

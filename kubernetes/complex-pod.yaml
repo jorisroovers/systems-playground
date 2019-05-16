@@ -33,4 +33,3 @@ spec:
       limits:
         memory: "64Mi"
         cpu: "500m"
-      
