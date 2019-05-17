@@ -17,7 +17,7 @@ spec:
         label: grpc-app
     spec:
       containers:
-      - name: web1
+      - name: web
         image: web
         # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
         # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
@@ -25,21 +25,7 @@ spec:
         ports:
         - containerPort: 1234
 
-      - name: web2
-        image: web
-        # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
-        # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 1234
-
-      - name: backend1
-        image: backend
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 50051
-
-      - name: backend2
+      - name: backend
         image: backend
         imagePullPolicy: Never
         ports:

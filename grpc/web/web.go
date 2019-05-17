@@ -53,6 +53,7 @@ func main() {
 	version := getEnv("SERVICE_VERSION", "1.0.0")
 	port := getEnv("SERVICE_PORT", "1234")
 	backendAddress := getEnv("SERVICE_BACKEND", "localhost:50051")
+	hostname := getEnv("HOSTNAME", "Hostname undefined")
 
 	log.Println("Hello!")
 	log.Println("Version:", version)
@@ -66,7 +67,7 @@ func main() {
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		log.Println("[GET] /")
-		fmt.Fprintf(w, "This is the index page! (Version: %s)\n", version)
+		fmt.Fprintf(w, "This is the index page! (Version: %s, Host: %s)\n", version, hostname)
 	})
 	http.ListenAndServe(":" + port, nil)
 

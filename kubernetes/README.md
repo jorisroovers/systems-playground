@@ -6,7 +6,7 @@
 ```sh
 # Installation instructions at https://github.com/kubernetes/minikube/releases:
 # At the time of writing
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-darwin-amd64 && chmod +x minikube && sudo cp minikube /usr/local/bin/ && rm minikube
+brew cask install minikube
 brew install kubernetes-cli
 
 # Starting minikube
@@ -83,8 +83,8 @@ Make sure to build the images with docker (pointing to the minikube docker insta
 
 ## Intro to k8s
 
-K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, a bunch of them can also 
-be created/manipulated using CLI commands (but not all resource types - some require yaml files). 
+K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, a bunch of them can also
+be created/manipulated using CLI commands (but not all resource types - some require yaml files).
 List all resource types with ```kubectl get --help```.
 
 Basic resources:
@@ -105,13 +105,6 @@ Under-the-hood processes:
 - kube-dns
 - sidecar
 
-## Notes
-```sh
-# Show available nodes:
-kubectl get nodes
-kubectl describe nodes
-
-```
 
 ## Single container deployments
 
@@ -139,8 +132,13 @@ kubectl apply -f complex-pod.yaml
 kubectl get deployments
 kubectl get pods # a deployment can contain multiple pods
 kubectl get services  # services expose ports from deployments/pods for external use
+
+# Pod finding
 kubectl get pods -l foo=bar # only pods with label 'foo=bar'
 kubectl get pods -l 'foo in (bar, bazz)' # more complex selector
+kubectl get pods --field-selector status.phase=Running
+kubectl get pods -o json # output in json. Other options: yaml, wide, name, custom-columns, go-template and more
+kubectl get pod -o go-template --template "{{range .items}}{{.metadata.name}} {{end}}"
 
 # Resource specific details
 kubectl describe pod hello-web
@@ -191,7 +189,6 @@ kubectl delete pod web-from-file web-from-file-complex
 # Delete multiple resources of different types by specifying their resource type as well: 
 # kubectel delete <resource-type>/<resource-name>
 kubectl delete pod/web-from-file secret/apikey
-
 ```
 
 ## Deployments and rollouts
@@ -204,6 +201,11 @@ kubectl apply -f deployments/deployment-v1.yaml
 kubectl expose deployment my-app --type=NodePort
 curl $(minikube service my-app --url)
 
+# Note that when using deployments, the container hostname is automatically mapped to the podname
+# This is NOT the case when manually creating a single POD
+PODNAME=$(kubectl get pod -l label=my-app -o name | sed  "s/pod\///")
+kubectl exec $PODNAME hostname
+
 # Roll out a newer version of the my-app
 kubectl apply -f deployments/deployment-v2.yaml
 curl $(minikube service my-app --url) # will show 'version 2'
@@ -215,7 +217,7 @@ kubectl rollout history deploy/my-app
 kubectl rollout undo deploy/my-app --to-revision=1
 curl $(minikube service my-app --url) # shows 'version 1' again
 
-# Roll out v3, which has 10 replicas configured. Use 'rollout status' to follow along.
+# Roll out v3, which has 10 replicas configured. Use 'rollout status' to follow along as k8s brings up new pods and tears down the old ones.
 kubectl apply -f deployments/deployment-v3.yaml
 kubectl rollout status deploy/my-app
 kubectl get pods
@@ -235,10 +237,17 @@ kubectl get rs
 kubectl scale --replicas 3 deploy/my-app
 kubectl scale --replicas 2 deploy/my-app # scale down
 
-
+# Note that if you do a GET request against the hosts that k8s will be doing round-robin LB between the pods
+curl $(minikube service my-app --url)
+# Example Output, note that the 'Host' part changes when you do consecutive requests:
+# This is the index page! (Version: 1.0, Host: my-app-66f5b89f64-jnksd)
 ```
 
-TODO: related to replica sets
+## Services
+A service is an abstraction for pods, providing a stable, so called virtual IP (VIP) address. While pods may come and go and with it their IP addresses, a service allows clients to reliably connect to the containers running in the pod using the VIP.
+
+TODO
+
 
 
 
@@ -267,7 +276,6 @@ kubectl exec <pod-name> -c web ls
 # Show logs of the backend container in the pod for this deployment
 kubectl logs <pod-name> backend
 ```
-
 
 ## Volumes
 Volumes can be shared across different containers.
@@ -299,6 +307,27 @@ kubectl exec pod-with-volumes -c container2 -- cat /tmp/hurdur/test
 echo "testfile" > /tmp/k8s-shared/hostpath-test
 # Read file on container
 kubectl exec pod-with-volumes -c container1 -- cat /tmp/shared1/hostpath-test
+```
+
+## Downward API
+Way to expose specific k8s info to pods, without the pods needing to do explicit REST API calls to the k8s API (you probably also don't want to allow pods to access the k8s API directly.)
+
+The available fields are not very well documented. Best I could find is this link:
+https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/#capabilities-of-the-downward-api
+
+```sh
+kubectl apply -f downward-api.yaml
+# Env vars
+kubectl exec downward-api-demo env
+
+# Volumes
+kubectl exec downward-api-demo cat /etc/podinfo/annotations
+kubectl exec downward-api-demo ls /etc/podinfo
+
+# Benefit of volume: config can be updated
+kubectl exec downward-api-demo cat /etc/podinfo/labels
+kubectl label pod downward-api-demo foo=bar
+kubectl exec downward-api-demo cat /etc/podinfo/labels
 ```
 
 ## Persistent volumes
@@ -335,6 +364,24 @@ kubectl get pods -n foobar # shorthand
 # Resources can exist with the same name in different namespaces
 kubectl apply -f simple-pod.yaml # default namespace
 kubectl apply --namespace foobar -f simple-pod.yaml
+```
+
+## Configmap
+Easy way to store configuration (i.e. config management).
+
+```sh
+# Literal configmap configuration
+kubectl create configmap my-config --from-literal=foo.bar=hurdur
+kubectl get configmap my-config
+kubectl get configmap my-config -o yaml
+
+# From file
+kubectl create configmap game-config --from-file=configmap/game.properties
+
+# Consume in pod
+kubectl apply -f configmap/configmap-example.yaml
+kubectl exec configmap-example env
+kubectl exec configmap-example cat /etc/config/game.properties
 ```
 
 ## Secrets
@@ -384,10 +431,16 @@ kubectl create secret generic mysecret --from-literal=username=joris --from-lite
 # NOTE: See how the secret on the mounted volume is updated while the env var is not.
 ```
 
-
 ### Removal
 ```bash
 kubectl delete secret apikey
+```
+
+## Nodes
+```sh
+# Show available nodes:
+kubectl get nodes
+kubectl describe nodes
 ```
 
 ## APIs

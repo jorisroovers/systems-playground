@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downward-api-demo
+  # labels are important in k8s. In this case, we need the label to be able to refer to this pod from the
+  # 'kubectl expose' command (see README.md). Without this label, that won't work.
+  # Bottom-line: always label your pods!
+  labels:
+    mylabel: downward-api-demo
+spec:
+  containers:
+  - name: web
+    image: web
+    # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+    # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+    imagePullPolicy: Never
+    ports:
+      - containerPort: 1234
+    env:
+      # Use the downwardAPI in env vars
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+
+    volumeMounts:
+      - name: podinfo
+        mountPath: /etc/podinfo
+        readOnly: false
+
+  volumes:
+    - name: podinfo
+      downwardAPI:
+        items:
+          - path: "labels"
+            fieldRef:
+              fieldPath: metadata.labels
+          - path: "annotations"
+            fieldRef:
+              fieldPath: metadata.annotations

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-example
+  # labels are important in k8s. In this case, we need the label to be able to refer to this pod from the
+  # 'kubectl expose' command (see README.md). Without this label, that won't work.
+  # Bottom-line: always label your pods!
+  labels:
+    mylabel: configmap-example
+spec:
+  containers:
+  - name: web
+    image: web
+    # We need to set imagePullPolicy=Never to ensure that k8s will search our local images.
+    # More info: https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+    imagePullPolicy: Never
+    ports:
+    - containerPort: 1234
+    env:
+      # Consume ConfigMap as envvar
+      - name: FOOBAR
+        valueFrom:
+          configMapKeyRef:
+            name: my-config
+            key: foo.bar
+
+    # Consume ConfigMap as volume
+    volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+
+  volumes:
+    - name: config-volume
+      configMap:
+        name: game-config

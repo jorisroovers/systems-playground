@@ -34,7 +34,7 @@ spec:
   - name: myvolume
     emptyDir: {}
 
-  # Volume shared between k8s node (=host) and containers
+  # hostPath: Volume shared between k8s node (=host) and containers
   - name: mysharedvolume
     hostPath:
       # directory location on host
