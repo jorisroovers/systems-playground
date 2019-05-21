@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: parallel-job
+spec:
+  completions: 200 # Run 20 of these jobs
+  parallelism: 3
+  template:
+    metadata:
+      name: parallel-job
+    spec:
+      containers:
+      - name: counter
+        image: web
+        imagePullPolicy: Never
+        command:
+         - "/bin/sh"
+         - "-c"
+         - "for i in 9 8 7 6 5 4 3 2 1 ; do echo $i ; done"
+      restartPolicy: Never

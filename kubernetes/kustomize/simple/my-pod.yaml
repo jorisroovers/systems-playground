@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    mylabel: my-pod
+spec:
+  containers:
+  - name: web
+    image: web
+    imagePullPolicy: Never # Needed for easy use with minikube
+    ports:
+    - containerPort: 1234

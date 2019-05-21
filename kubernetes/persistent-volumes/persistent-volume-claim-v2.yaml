@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim-v2
+spec:
+  storageClassName: my-storage-class # You can just pick the identifier here, it's just a way to map PVCs to PVs.
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

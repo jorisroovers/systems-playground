@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-sidecar
+  labels:
+    mylabel: pod-with-sidecar
+spec:
+
+  # Expose the nginx config as a volume
+  volumes:
+    - name: conf
+      configMap:
+        name: nginx
+
+  containers:
+  ######################################################################################################################
+  # Main container: Container providing auxillary services to the main container (e.g. proxy, log collection, caching, etc).
+  ######################################################################################################################
+  - name: web
+    image: web
+    imagePullPolicy: Never # Use local copy
+    ports:
+    - containerPort: 1234
+
+  ######################################################################################################################
+  # Side-car: Container providing auxillary services to the main container (e.g. proxy, log collection, caching, etc).
+  ######################################################################################################################
+  - name: web-proxy
+    image: nginx:1.15
+    imagePullPolicy: IfNotPresent
+    ports:
+      - containerPort: 4567
+    volumeMounts:
+      - mountPath: /etc/nginx/conf.d
+        name: conf

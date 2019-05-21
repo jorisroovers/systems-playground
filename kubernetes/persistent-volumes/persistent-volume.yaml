@@ -5,9 +5,10 @@ kind: PersistentVolume
 metadata:
   name: pv0001
 spec:
+  storageClassName: my-storage-class # You can just make this up, it's just a way to map PVCs to PVs.
   accessModes:
     - ReadWriteOnce
   capacity:
     storage: 5Gi
-  hostPath:
+  hostPath: # hostPath pv type needed for minikube
     path: /data/pv0001/

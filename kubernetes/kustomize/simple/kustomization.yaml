@@ -1,0 +1,67 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Resources to act on
+resources:
+- my-pod.yaml
+
+########################################################################################################################
+# Metadata modifications
+# Metadata changes that will be applied to all affected resources
+########################################################################################################################
+# Adds namespace to all resources.
+namespace: my-namespace
+
+# Value of this field is prepended/suffixed to the names of all resources
+# e.g. a deployment named "wordpress" becomes "myprefix-wordpress-mysuffix".
+# The suffix is appended before content hash if resource type is ConfigMap or Secret.
+namePrefix: myprefix-
+nameSuffix: -mysuffix
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  foo: bar
+  hur: dur
+
+# Annotations (non-identifying metadata) to add to all resources.
+commonAnnotations:
+  my-annotation: my-annotation-value
+
+########################################################################################################################
+# Generators
+# Generating new resources (currently only secrets and configmap)
+# Note that you'd typically just use external .yaml files that declare the resource type.
+# Joris: Note entirely sure why configmap and secrets need generators instead...
+########################################################################################################################
+# You can also make generators replace or merge resources using the 'behavior' attribute.
+
+# generatorOptions modify behavior of all generators.
+# This *only* applies to newly generated resources, not to existing resources that are kustomized.
+generatorOptions:
+  labels: # labels to add to all generated resources
+    kustomize.generated.resources: kustomization-label
+  annotations: # annotations to add to all generated resources
+    kustomize.generated.resource: kustomization-annotation
+  # disableNameSuffixHash is true disables the default behavior of adding a
+  # suffix to the names of generated resources that is a hash of
+  # the resource contents.
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: my-java-server-env-vars
+  literals:
+  - JAVA_HOME=/opt/java/jdk
+  - JAVA_TOOL_OPTIONS=-agentlib:hprof
+
+secretGenerator:
+- name: mysecret
+  literals:
+  - mysecret=42
+
+########################################################################################################################
+# Patches
+# Small changes to existing resources
+########################################################################################################################
+
+patchesStrategicMerge:
+- patch-pod-memory-limit.yaml

@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: my-app
+  labels:
+    mylabel: my-app
+spec:
+  template:
+    metadata:
+      labels:
+        label: my-app
+    spec:
+      containers:
+      - name: web
+        image: web
+        imagePullPolicy: Never # needed for minikube
+        ports:
+          - containerPort: 1234
+        volumeMounts:
+          - name: myvolume
+            mountPath: /tmp/persistent
+
+      volumes:
+        - name: myvolume
+          persistentVolumeClaim:
+            claimName: myclaim-v1

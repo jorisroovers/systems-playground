@@ -1,0 +1,13 @@
+# Note how this file just specifies the patch and needs the minimal names to be able to identify which resource
+# to modify. This then gets merged with the existing resource config.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: web
+    image: web
+    resources:
+      limits:
+        memory: "128Mi"
