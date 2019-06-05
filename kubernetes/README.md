@@ -86,7 +86,7 @@ Make sure to build the images with docker (pointing to the minikube docker insta
 
 K8s has many different types of resources (service, deployment, pod, nodes). All can be created via yaml files, a bunch of them can also
 be created/manipulated using CLI commands (but not all resource types - some require yaml files).
-List all resource types with ```kubectl get --help```.
+List all resource types with ```kubectl api-resources```.
 
 Basic resources:
 - Pods: collection of scalable containers. A pod typically maps onto a single micro-service (which might be comprised of multiple containers).
@@ -126,6 +126,9 @@ kubectl apply -f simple-pod.yaml
 
 # More complex example file
 kubectl apply -f complex-pod.yaml
+
+# You can create multiple resources using a multi-resource yaml file that contains separator '---' lines
+kubectl apply -f multi-resource.yaml
 ```
 
 ### Inspection
@@ -136,6 +139,7 @@ kubectl get services  # services expose ports from deployments/pods for external
 
 # Pod finding
 kubectl get pods -l foo=bar # only pods with label 'foo=bar'
+kubectl get all -l foo=bar # all resources with label 'foo=bar'
 kubectl get pods -l 'foo in (bar, bazz)' # more complex selector
 kubectl get pods --field-selector status.phase=Running
 kubectl get pods -o json # output in json. Other options: yaml, wide, name, custom-columns, go-template and more
@@ -237,6 +241,11 @@ A k8s Deployment under-the-hood contains a Replicaset which is a wrapper around 
 While you can manually create the ReplicaSet resource type, there's usually no reason to do so directly.
 Instead, when you use a Deployment, k8s will automatically create the replicaset for you.
 
+In the past, k8s used the ReplicationController for the same purpose, but the use of Deployment (+ReplicaSet) is now advised over the ReplicationController. Deployments adds add additional features to ReplicationControllers such as rollback.
+
+Historical context:
+Note that the ReplicationController manipulates Pods directly, it does NOT use the ReplicaSet resource type. ReplicaSet's were created to be used by Deployments, and to encapsulate and seperate the replication behavior from the other Deployment capabilities such as versioning, rollback, etc. In the past, with the ReplicationController, the capabilities of replication and deployment (versioning, rollout, rollback, etc) where much more intertwined within the single ReplicationController resource type.
+
 ```sh
 # Create deployment, show associated replicaset that k8s created
 kubectl apply -f deployments/deployment-v1.yaml
@@ -322,7 +331,7 @@ kubectl exec pod-with-volumes -c container1 -- cat /tmp/shared1/hostpath-test
 ```
 
 ## Side-cars
-Sidecars are containers within a pod that provide auxillary services to the main pod container.
+Sidecars are containers **within** a pod that provide auxillary services to the main pod container.
 Typical examples: caching, proxying, log aggregation, monitoring agents, etc.
 
 ```sh
@@ -361,7 +370,6 @@ kubectl logs $PODNAME
 ```bash
 # Create healthcheck
 kubectl apply -f healthchecks/simple-pod.yaml
-
 
 
 ```
@@ -465,6 +473,50 @@ kubectl get pv
 kubectl create -f persistent-volumes/persistent-volume-claim-v2.yaml
 kubectl get pv,pvc
 ```
+
+## StatefulSet
+StatefulSet: resource type used to manage stateful applications. Used instead of a Deployment, which only manages stateless apps.
+A Stateful set will provide persistent volumes per pod. StatefulSets provide guarantees about the ordering and uniqueness of Pods. This is useful for when you have applications that require stable, unique network identifiers, persistent storage or deterministic deployment/scaling patterns.
+
+```sh
+ # Create statefulset + headless service (=no clusterIP)
+kubectl apply -f statefulset.yaml
+
+kubectl get statefulsets # shorthand=svc
+kubectl get sts,svc,pod,pvc # show all created resources from statefulset.yaml
+
+# You'll notice that the PVC and PODs following deterministic naming conventions,
+# as opposed to Deployments which will generate unique ids for pods, etc.
+
+# When you delete a pod, a pod with the same name will be recreated
+kubectl delete pod mystatefulset-1; kubectl get pod
+
+# Compared to Deployment, where upon POD deletion, a new POD is created with a different identifier
+kubectl apply -f deployments/deployment-v3.yaml
+kubectl get pod
+POD=$(kubectl get pod -l "label=my-app" | awk 'NR==2{print $1 }'); echo $POD
+kubectl delete pod $POD
+kubectl get pod
+kubectl delete deploy my-app # clean up
+
+
+# Data is also persisted between statefulset recreations (to avoid data loss):
+# Create file
+kubectl exec mystatefulset-1 ls /mydata
+kubectl exec mystatefulset-1 touch /mydata/foobar
+# Delete Statefulset, note how PersistentVolumeClaims are not deleted automatically
+kubectl delete sts mystatefulset
+kubectl get pvc
+
+# When recreating StatefulSet, same volumes will be mounted, data is still there
+kubectl apply -f statefulset.yaml
+kubectl exec mystatefulset-1 ls /mydata
+```
+
+## DaemonSet
+
+A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are added to the cluster, Pods are added to them. As nodes are removed from the cluster, those Pods are garbage collected. Deleting a DaemonSet will clean up the Pods it created.
+Useful for running e.g. storage, log collection or monitoring daemons (cepth, gluster, logstash, fluent, Prometheues NodeExporter, AppD agent, etc) on every node.
 
 ## Namespaces
 Way to group k8s resources together. Like a tenant/project on other IaaS platforms.
@@ -605,6 +657,49 @@ kubectl get --raw=/api/v1/pods
 # Doesn't seem to work well? UI is unresponsive
 http://localhost:8080/swagger-ui/
 ```
+
+## Ingress
+Resource type that manages external access to the services in a cluster, typically HTTP.
+Ingress can provide load balancing, SSL termination and name-based virtual hosting.
+
+https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/
+```sh
+# Minikube comes with an NGINX Ingress controller
+minikube addons enable ingress
+
+# Needs few mins the first time (to download image), but nginx will show up after a while
+kubectl get pods -n kube-system # nginx-ingress-controller-xxx
+
+# Create sample app and service (=2 resources in example-app.yaml)
+kubectl apply -f ingress/example-app.yaml
+kubectl get svc,pod -l app=my-app
+
+# Sample-app can now be accessed through the service
+curl $(minikube service --url my-app)
+
+# In new terminal: open ingress controller logs to see what happens in next steps:
+NGINX_POD=$(kubectl get pod -n kube-system | awk '/nginx/{print $1}'); echo $NGINX_POD
+kubectl logs -f $NGINX_POD -n kube-system
+
+# Create ingress
+kubectl apply -f ingress/example-ingress.yaml
+
+# Modify /etc/host to add hello-world.info to the minikube ip
+# Note: this name mapping is required, you can't curl directly to the IP, Nginx will not serve the page in that case
+grep $(minikube ip) /etc/hosts || echo "$(minikube ip) hello-world.info" | sudo tee -a /etc/hosts
+
+# This works
+curl "hello-world.info/foobar"
+# These won't
+curl "$(minikube ip)/foobar" # hostname required
+curl "hello-world.info/hurdur" # only foobar is mapped
+
+# Clean up
+kubectl delete ingress/example-ingress svc/my-app pod/my-app
+sudo sed -i.bak "/$(minikube ip)/d" /etc/hosts # cleanup /etc/hosts
+```
+
+
 
 ## Under the hood
 

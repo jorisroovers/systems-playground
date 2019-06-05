@@ -1,15 +1,17 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: my-ingress
+  name: my-traefik-ingress
+  labels:
+    app: my-app
   annotations:
     kubernetes.io/ingress.class: traefik
 spec:
   rules:
-  - host: whoareyou.localhost
+  - host: mytraefik.localhost
     http:
       paths:
       - path: /
         backend:
           serviceName: my-app
-          servicePort: http
+          servicePort: 8080
