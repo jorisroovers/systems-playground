@@ -281,14 +281,42 @@ kubectl apply -f simple-pod.yaml
 kube apply -f services/my-service.yaml
 
 # 'expose' is a convenience command to quickly create services for already created resources
-# Note that the resources in the selector don't have to be available for a service to be created
 kubectl expose pod web-from-file --type=NodePort
 
-# Note that the resources in the selector don't have to be available for a service to be created:
+# Note that the resources in the selector don't have to be available for a service to be created.
+# This is called a 'headless' service
 kubectl apply -f services/another-service.yaml
 curl $(minikube service another-service --url) # Connection refused
 kubectl apply -f complex-pod.yaml
 curl $(minikube service another-service --url) # Works!
+```
+
+### Services and DNS
+We creating a service and DNS is enabled in the cluster, all containers will have DNS access to all other hosts in the cluster.
+
+```sh
+# Start backend pod, 2 replicaes
+kubectl run backend --image=backend --port=50051 --replicas 2 --image-pull-policy=Never --labels "app=grpc,tier=backend"
+# Start web pod, 2 replicas, set env var SERVICE_BACKEND to point to backend
+kubectl run web --image=web --port=1234 --replicas 2 --image-pull-policy=Never --labels "app=grpc,tier=web" --env="SERVICE_BACKEND=backend:50051"
+# Expose the services, this will automatically make them available via DNS within the cluster
+kubectl expose deploy/web deploy/backend --type NodePort --labels "app=grpc"
+
+# See how an nslookup in a 'backend' pod resolves to the backend IP
+WEB_POD=$(kubectl get pod -l "app=grpc,tier=web" | awk 'NR==2{print $1 }'); echo $WEB_POD
+kubectl exec $WEB_POD -ti -- nslookup backend
+
+# Try curling from backend to web using DNS
+BACKEND_POD=$(kubectl get pod -l "app=grpc,tier=backend" | awk 'NR==2{print $1 }'); echo $BACKEND_POD
+kubectl exec $BACKEND_POD -ti -- curl web:1234
+
+# Note that you cannot access services outside the current namespace
+kubectl get svc -n kube-system # this will list kube-dns
+kubectl exec $WEB_POD -ti -- nslookup kube-dns # Does not work
+
+# Hit the /hello url on web, which will do a gRPC call to the backend
+# Notice the loadbalancing to the backend on subsequent hits
+curl $(minikube service web --url)/hello
 ```
 
 ### Service types
@@ -372,32 +400,6 @@ kubectl logs $PODNAME
 kubectl apply -f healthchecks/simple-pod.yaml
 
 
-```
-
-## Multi-container deployments
-
-JR: Continue here :-) multi-container-pod.yaml doesn't work yet.
-
-```bash
-# Create multi-container deployment
-kubectl create -f multi-container-deployment.yaml
-
-# Get details on containers that are part of the pod
-kubectl describe deployment multi-container-deployment
-
-#
-kubectl get replicaset
-kubectl get rs
-
-kubectl get pods
-
-# Run a command in a specific container using the -c flag
-kubectl exec <pod-name> -c backend ls
-kubectl exec <pod-name> -c web ls
-
-
-# Show logs of the backend container in the pod for this deployment
-kubectl logs <pod-name> backend
 ```
 
 ## Downward API

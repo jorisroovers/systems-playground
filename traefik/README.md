@@ -1,5 +1,6 @@
 # Traefik
 Cloud-Native services router (reverse proxy/LB/SSL offload, etc), written in Go.
+v2.0 (currently in alpha) supports more elaborate features with middlewares: rate limiting, URL rewriting, etc. v2 also supports TCP proxying, v1.x didn't do (HTTP only?).
 
 ## Getting Started
 ```bash
