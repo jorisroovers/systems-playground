@@ -99,7 +99,7 @@ Basic resources:
 Great for hands-on examples: http://kubernetesbyexample.com
 
 Under-the-hood processes:
-- kubectl: runs on every Node to provide computing
+- kubelet: runs on every Node to provide computing
 - kube-proxy: runs on every Node to do mappings between VIPs and pods via iptables and IP namespaces.
 - kube-scheduler
 - kube-controller-manager
@@ -241,7 +241,7 @@ A k8s Deployment under-the-hood contains a Replicaset which is a wrapper around 
 While you can manually create the ReplicaSet resource type, there's usually no reason to do so directly.
 Instead, when you use a Deployment, k8s will automatically create the replicaset for you.
 
-In the past, k8s used the ReplicationController for the same purpose, but the use of Deployment (+ReplicaSet) is now advised over the ReplicationController. Deployments adds add additional features to ReplicationControllers such as rollback.
+In the past, k8s used the ReplicationController for the same purpose, but the use of Deployment (+ReplicaSet) is now advised over the ReplicationController. Deployments add additional features to ReplicationControllers such as rollback.
 
 Historical context:
 Note that the ReplicationController manipulates Pods directly, it does NOT use the ReplicaSet resource type. ReplicaSet's were created to be used by Deployments, and to encapsulate and seperate the replication behavior from the other Deployment capabilities such as versioning, rollback, etc. In the past, with the ReplicationController, the capabilities of replication and deployment (versioning, rollout, rollback, etc) where much more intertwined within the single ReplicationController resource type.
