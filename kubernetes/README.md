@@ -104,8 +104,6 @@ Under-the-hood processes:
 - kube-scheduler
 - kube-controller-manager
 - kube-dns
-- sidecar
-
 
 ## Single container deployments
 
@@ -120,6 +118,8 @@ kubectl run hello-web --image=web --port=1234 --image-pull-policy=Never
 kubectl run hello-web --image=web --port=1234 --image-pull-policy=Never --labels "foo=bar,hurr=durr"
 # Same, but using a file definition (only creates a pod, not a deployment):
 kubectl create -f simple-pod.yaml
+# Similar: run a shell in a busybox image, clean everything up when exiting the shell (--rm)
+kubectl run -i --rm --tty busybox --image=busybox --restart=Never -- sh
 
 # Same thing (apply allows you to apply file against existing resources as well):
 kubectl apply -f simple-pod.yaml
@@ -638,6 +638,30 @@ watch kubectl get job # cronjob instantiations
 ```
 
 ## APIs
+
+Kubernetes by default exposes a `kubernetes` service that provides API access.
+```sh
+kubectl get svc kubernetes
+```
+
+### From pod within cluster
+```sh
+# Start simple run POD (auto-cleanup on exit)
+kubectl run -i --tty my-pod --image=alpine:3.9 --restart=Never --rm -- sh
+# Add curl, jq
+apk add curl jq
+
+# Since the 'kubernetes' is exposed by default, pods can just query that host for API access
+# Tokens are automatically inserted in each pod under /var/run/secrets
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+curl --insecure -H "Authorization: Bearer $TOKEN" https://kubernetes:443/api/v1
+
+# Performing server authentication as well (i.e. without --insecure)
+CERT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+curl --cacert $CERT -H "Authorization: Bearer $TOKEN" https://kubernetes:443/api/v1
+```
+
+### From outside cluster
 While it's possible to access the k8s API directly, it's usually more easy to use ```kubectl proxy``` to take care of the certificates, authentication and selecting the right endpoint.
 
 Instructions on how to do it without ```kubectl proxy```: https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/#without-kubectl-proxy
@@ -659,6 +683,7 @@ kubectl get --raw=/api/v1/pods
 # Doesn't seem to work well? UI is unresponsive
 http://localhost:8080/swagger-ui/
 ```
+
 
 ## Ingress
 Resource type that manages external access to the services in a cluster, typically HTTP.

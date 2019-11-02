@@ -4,7 +4,12 @@ Use `gcloud config configurations xxx` commands to modify the existing config.
 
 # GKE Setup
 As per https://istio.io/docs/setup/platform-setup/gke/
+
 ```sh
+# Check that we're pointing to the right cloud and no cluster exist
+gcloud config configurations list
+gcloud container clusters list
+
 # Create k8s cluster for istio on GKE
 gcloud container clusters create istio-cluster --cluster-version latest --num-nodes 4
 
@@ -62,17 +67,35 @@ kubectl get pod,svc
 # Confirm services are working:
 # Should return "<title>Simple Bookstore App</title>"
 kubectl exec -it $(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}') -c ratings -- curl productpage:9080/productpage | grep -o "<title>.*</title>"
-```
 
-### Expose BookInfo micro-service so it's accessible from outside
-We use an Istio Gateway for this:
-
-```sh
+# Expose BookInfo micro-service so it's accessible from outside, using an Istio Gateway
 kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
-kubectl get gateway
+kubectl get gateway,virtualservices
+
+# Determine external Gateway URL
+export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+
+# Confirm bookstore service is accessible from outside
+# Should return "<title>Simple Bookstore App</title>"
+# You can also point your browser to this URL
+curl -s http://${GATEWAY_URL}/productpage | grep -o "<title>.*</title>"
+
+
+# Define Destination Rules so Istio is aware of what version routes of the app exists
+kubectl apply -f samples/bookinfo/networking/destination-rule-all.yaml
+kubectl get destinationrules -o yaml
+
 ```
-
-
+# Playing around
+```sh
+# Accessing grafana
+kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 3000:3000 &
+# Prometheys
+kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
+```
 
 # Cleanup
 From https://istio.io/docs/setup/install/kubernetes/#uninstall
