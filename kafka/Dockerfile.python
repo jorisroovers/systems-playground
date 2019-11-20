@@ -1,0 +1,5 @@
+FROM python:3.7-stretch
+
+RUN pip install kafka-python==1.4.7
+
+VOLUME [ "/data" ]
