@@ -1,0 +1,31 @@
+{
+    "variables": {
+        "myvar123": ""
+    },
+    "builders": [{
+        "type": "virtualbox-iso",
+        "guest_os_type": "Redhat_64",
+        "iso_url": "http://mirror.previder.nl/centos/7.7.1908/isos/x86_64/CentOS-7-x86_64-Minimal-1908.iso",
+        "iso_checksum": "9a2c47d97b9975452f7d582264e9fc16d108ed8252ac6816239a3b58cef5c53d",
+        "iso_checksum_type": "sha256",
+        "ssh_username": "packer",
+        "ssh_password": "mypass",
+        "http_directory": "my_http_directory",
+        "ssh_timeout": "90m",
+        "shutdown_command": "echo 'packer'|sudo -S /sbin/halt -h -p",
+        "boot_command": [
+            "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/centos7-ks.cfg<enter><wait>"
+        ],
+        "vboxmanage": [
+            ["modifyvm", "{{.Name}}", "--memory", "512"],
+            ["modifyvm", "{{.Name}}", "--cpus", "2"]
+        ]
+    }],
+    "provisioners": [{
+        "type": "shell",
+        "inline": ["sudo touch /root/itworked.txt"]
+    }, {
+        "type": "shell",
+        "inline": ["echo testing > /home/packer/provisioner.txt"]
+    }]
+}
