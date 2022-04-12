@@ -1,0 +1,10 @@
+---
+# tasks file for my_new_role
+- name: Molecule Hello World!
+  debug:
+    msg: Hello, World!
+
+- name: Create test file
+  template:
+    dest: /tmp/foo.txt
+    src: foo.txt

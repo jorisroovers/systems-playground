@@ -1,0 +1,45 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+################################################################################
+# Ansible allows for assert actions that you can use for testing
+
+  - name: Example assertion
+    assert:
+      that: true
+
+################################################################################
+# So you can use one task to put data into a variable, 
+# And then use a different task for asserting
+
+  - name: Fetch contents of file - different way
+    shell: cat /tmp/foo.txt
+    register: myfile_contents2
+    
+  - name: Assert content is correct!
+    assert: 
+      that: "'This is a template!' == myfile_contents2.stdout" 
+
+################################################################################
+# Alternatively, you can also use a failed_when statement
+# Note: there is no such thing as a success_when
+
+  - name: verify contents of file
+    shell: cat /tmp/foo.txt
+    register: myfile_contents
+    failed_when: "'This is a template!' != myfile_contents.stdout" 
+
+################################################################################
+# Another example, that uses ansible builtin modules instead of shell to
+# do assertions
+
+# - name: Get index.html
+#   uri:
+#     url: http://localhost
+#     return_content: yes
+#   register: this
+#   failed_when: "expected_content not in this.content"
