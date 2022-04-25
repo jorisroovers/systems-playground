@@ -1,0 +1,14 @@
+# UDP runs on port 53
+# This is the root zone (= .), everything not in other explicitely defined DNS zones (below), we'll end up here
+.:53 {
+    forward . 8.8.8.8 9.9.9.9
+    log
+    errors
+}
+
+example.com:53 {
+    # Get DNS entries from file
+    file /root/example.db
+    log
+    errors
+}
