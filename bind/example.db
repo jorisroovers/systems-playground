@@ -1,0 +1,36 @@
+;; #####################################################################################################################
+;; SOA Record: Start of Authority
+;; #####################################################################################################################
+example.com.        IN  SOA dns.example.com. jorisroovers.example.com. 2015082541 7200 3600 1209600 3600
+;; Details:
+;; example.com.               : DNS Zone this DNS server is responsible for
+;; SOA                        : Start of Authority
+;; jorisroovers.example.com   : refers to the email of the administrator of this DNS server. 
+;;                              Note that the @ sign is simply noted with a period; this is not a mistake,
+;;                              but how it is formatted.
+;; 2015082541                 : Serial number (has to be unique id, often a timestamp is used)
+;; 7200                       : Refresh rate in seconds; after this amount of time, the client should re-retrieve an SOA.
+;; 3600                       : Retry rate in seconds; after this, any Refresh that failed should be retried.
+;; 1209600                    : Amount of time in sec before a client should no longer consider this zone as "authoritative". 
+;; 3600                       : Default TTL in sec, which is the default for all records in the zone.
+
+;; #####################################################################################################################
+;; A records
+;; #####################################################################################################################
+;; IN = The CLASS of a record is set to IN (for Internet) for common DNS records involving
+;; Internet hostnames, servers, or IP addresses.
+
+gateway.example.com.    IN  A   192.168.1.1
+dns.example.com.    IN  A   192.168.1.2
+host.example.com.   IN  A   192.168.1.3
+
+;; #####################################################################################################################
+;; CNAME records
+;; #####################################################################################################################
+server.example.com. IN  CNAME   host.example.com
+
+;; #####################################################################################################################
+;; TXT records
+;; #####################################################################################################################
+;; 0 = TTL
+example.com.		0	IN	TXT	"foo=bar"
